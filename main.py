@@ -39,16 +39,21 @@ def home():
 def register():
     if request.method == "POST":
         name = request.form['name']
-        new_user = User(
-            email=request.form['email'],
-            password=generate_password_hash(password=request.form['password'], method='pbkdf2:sha256', salt_length=8),
-            name=request.form['name'],
-        )
-        db.session.add(new_user)
-        db.session.commit()
+        email = User.query.filter_by(email=request.form['email']).first()
+        if not email:
+            new_user = User(
+                email=request.form['email'],
+                password=generate_password_hash(password=request.form['password'], method='pbkdf2:sha256', salt_length=8),
+                name=request.form['name'],
+            )
+            db.session.add(new_user)
+            db.session.commit()
 
-        login_user(new_user)
-        return render_template('secrets.html', name=name)
+            login_user(new_user)
+            return render_template('secrets.html', name=name)
+        else:
+            flash('User with such email already exists')
+            return redirect('login')
     return render_template("register.html")
 
 
@@ -63,7 +68,14 @@ def login():
         if user:
             if check_password_hash(user.password, password):
                 login_user(user)
+                flash('You are logged in.')
                 return redirect(url_for('secrets'))
+            else:
+                flash('Wrong password')
+                return redirect(url_for('login'))
+        else:
+            flash('User with that email doesnt exist')
+            return redirect(url_for('login'))
 
     return render_template("login.html")
 
